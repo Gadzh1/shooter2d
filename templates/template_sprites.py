@@ -28,8 +28,8 @@ clock = pygame.time.Clock()
 group_sprite = pygame.sprite.Group()
 
 game_folder = os.path.dirname(__file__)
-img_folder = os.path.join(game_folder, 'img')
-player_img = pygame.image.load(os.path.join(img_folder, 'motiga.png')).convert()
+img_folder = os.path.join(game_folder, '../game/img')
+player_img = pygame.image.load(os.path.join(img_folder, 'playerShip2_blue.png')).convert()
 
 player = Player()
 group_sprite.add(player)
