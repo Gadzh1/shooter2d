@@ -15,10 +15,11 @@ clock = pygame.time.Clock()
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.transform.scale(player_img, (80, 60))
+        self.image = pygame.transform.scale(player_img, (70, 50))
         self.image.set_colorkey((0, 0, 0))
         self.rect = self.image.get_rect()
         self.radius = 30
+        self.shield = 100
 
         self.rect.center = (WIDTH / 2, HEIGHT - 50)
         self.speed_x = 0
@@ -72,7 +73,7 @@ class Mob(pygame.sprite.Sprite):
         self.image_orig.set_colorkey((0, 0, 0))
         self.image = self.image_orig.copy()
         self.rect = self.image.get_rect()
-        self.radius = int(self.rect.width * 0.9 / 2)
+        self.radius = int(self.rect.width * 0.8 / 2)
 
         if rand_num == 0:
             self.hp = random.randrange(30, 71)
@@ -103,20 +104,44 @@ class Mob(pygame.sprite.Sprite):
             self.rect.center = old_centre
 
     def update(self):
-        self.rotate()
+        # self.rotate()
 
         self.rect.y += self.speed_y
         self.rect.x += self.speed_x
 
         if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:
-            self.kill()
-            add_mob()
+            add_mob(self)
 
 
-def add_mob():
+def add_mob(i):
+    i.kill()
     m = Mob()
     all_sprites.add(m)
     mobs.add(m)
+
+
+class HealthBar(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+
+        # подумай о том, есть ли смысл вообще тогда иметь класс HealthBar и, если есть, то для чего
+
+        # вот это можешь раскоментить позже, чтобы был больше размер, но нужно будет сделать тогда изменения в коде
+        size = shield.get_size()
+        self.image = pygame.transform.scale(shield, (size[0] * 2.5, size[1] * 2.5))
+
+
+def draw_bar(surf, image, healths):
+    # 1ый кортеж (2 параметра) - расстояние от левого края того экрана, на котором рисуем (то есть это наш главный экран - display)
+    # 1 значение - сколько слева отступ
+    # 2 значение - сколько вниз отступ
+
+    # 2ой кортеж (4 параметра)
+    # первые 2 значения - расстояние от левого края картинки (тут как раз и нужен наш отступ,
+    # для нас это количество жизней по факту, и еще кое-что)
+    # следующие 2 значения - размеры самой картинки
+    print(image.get_size())
+    surf.blit(image, (300, 10), (704, 0, 64, 16))
 
 
 font_name = pygame.font.match_font('arial')
@@ -144,6 +169,9 @@ blue_bullet_img = pygame.image.load(os.path.join(img_folder, 'laserBlue02.png'))
 red_bullet_img = pygame.image.load(os.path.join(img_folder, 'laserRed04.png')).convert()
 background = pygame.image.load(os.path.join(img_folder, 'blue.png')).convert()
 
+shield = pygame.image.load(os.path.join(img_folder, 'sp_bar_health_strip12.png')).convert()
+shield.set_colorkey((0, 0, 0))
+
 meteor_images = []
 meteor_list = [('meteorBrown_small2.png',
                 'meteorBrown_small1.png'),
@@ -163,8 +191,8 @@ shoot_sounds = [shoot_sound_1,
                 shoot_sound_2,
                 shoot_sound_3]
 
-pygame.mixer.music.load(os.path.join(snd_dir, 'tgfcoder-FrozenJam-SeamlessLoop.ogg'))
-pygame.mixer.music.set_volume(0.4)
+# pygame.mixer.music.load(os.path.join(snd_dir, 'tgfcoder-FrozenJam-SeamlessLoop.ogg'))
+# pygame.mixer.music.set_volume(0.4)
 
 for img in meteor_list:
     temp = []
@@ -184,7 +212,7 @@ all_sprites.add(player)
 
 score = 0
 
-pygame.mixer.music.play(loops=-1)
+# pygame.mixer.music.play(loops=-1)
 
 switch = True
 while switch:
@@ -192,37 +220,54 @@ while switch:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             switch = False
+
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_s:
-                bullet = Bullet(player.rect.centerx, player.rect.top)
-                random.choice(shoot_sounds).play()
-                all_sprites.add(bullet)
-                bullets.add(bullet)
+            if event.key == pygame.K_w:
+                if score >= 500:
+                    score -= 500
+
+                    if event.key == pygame.K_s:
+                        bullet = Bullet(player.rect.centerx, player.rect.top, 'red')
+                        random.choice(shoot_sounds).play()
+                        all_sprites.add(bullet)
+                        bullets.add(bullet)
+
+            else:
+                if event.key == pygame.K_s:
+                    bullet = Bullet(player.rect.centerx, player.rect.top, 'blue')
+                    random.choice(shoot_sounds).play()
+                    all_sprites.add(bullet)
+                    bullets.add(bullet)
 
     all_sprites.update()
-    hits = pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle)
-    if hits:
-        switch = False
+
+    hits = pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
+    for hit in hits:
+        player.shield -= hit.radius * 2
+        print(player.shield)
+        add_mob(hit)
+        if player.shield < 0:
+            switch = False
 
     hits = pygame.sprite.groupcollide(mobs, bullets, False, True)
     for i in hits:
         if hits[i][0].type == 'blue':
             i.hp -= hits[i][0].damage
             if i.hp <= 0:
-                i.kill()
-                add_mob()
+                add_mob(i)
                 score += 50 - i.radius
                 hit.play()
         elif hits[i][0].type == 'red':
-            i.kill()
-            add_mob()
+            add_mob(i)
             hit.play()
 
     display.fill((0, 0, 0))
     display.blit(background, background_rect)
+    # display.blit(health_bar.image, (704, 0))
     all_sprites.draw(display)
 
     draw_text(f'score: {score}', 30, display, 10, 0)
+    draw_bar(display, shield, 12)
 
     pygame.display.flip()
 
