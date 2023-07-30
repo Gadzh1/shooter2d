@@ -19,7 +19,7 @@ class Player(pygame.sprite.Sprite):
         self.image.set_colorkey((0, 0, 0))
         self.rect = self.image.get_rect()
         self.radius = 30
-        self.shield = 100
+        self.shield = 1
 
         self.rect.center = (WIDTH / 2, HEIGHT - 50)
         self.speed_x = 0
@@ -77,10 +77,13 @@ class Mob(pygame.sprite.Sprite):
 
         if rand_num == 0:
             self.hp = random.randrange(30, 71)
+            self.damage = random.randrange(1, 3)
         elif rand_num == 1:
             self.hp = random.randrange(70, 101)
+            self.damage = random.randrange(4, 6)
         elif rand_num == 2:
             self.hp = random.randrange(100, 151)
+            self.damage = random.randrange(7, 9)
 
         self.rect.x = random.randrange(WIDTH - self.rect.width)
         self.rect.y = random.randrange(-100, -40)
@@ -120,17 +123,6 @@ def add_mob(i):
     mobs.add(m)
 
 
-class HealthBar(pygame.sprite.Sprite):
-    def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-
-        # подумай о том, есть ли смысл вообще тогда иметь класс HealthBar и, если есть, то для чего
-
-        # вот это можешь раскоментить позже, чтобы был больше размер, но нужно будет сделать тогда изменения в коде
-        size = shield.get_size()
-        self.image = pygame.transform.scale(shield, (size[0] * 2.5, size[1] * 2.5))
-
-
 def draw_bar(surf, image, healths):
     # 1ый кортеж (2 параметра) - расстояние от левого края того экрана, на котором рисуем (то есть это наш главный экран - display)
     # 1 значение - сколько слева отступ
@@ -140,8 +132,10 @@ def draw_bar(surf, image, healths):
     # первые 2 значения - расстояние от левого края картинки (тут как раз и нужен наш отступ,
     # для нас это количество жизней по факту, и еще кое-что)
     # следующие 2 значения - размеры самой картинки
-    print(image.get_size())
-    surf.blit(image, (300, 10), (704, 0, 64, 16))
+    part = image.get_width() / 12
+    offset = image.get_width() - part * player.shield
+
+    surf.blit(image, (230, 10), (offset, 0, part, image.get_height()))
 
 
 font_name = pygame.font.match_font('arial')
@@ -171,6 +165,8 @@ background = pygame.image.load(os.path.join(img_folder, 'blue.png')).convert()
 
 shield = pygame.image.load(os.path.join(img_folder, 'sp_bar_health_strip12.png')).convert()
 shield.set_colorkey((0, 0, 0))
+size = shield.get_size()
+shield = pygame.transform.scale(shield, (size[0] * 2.5, size[1] * 2.5))
 
 meteor_images = []
 meteor_list = [('meteorBrown_small2.png',
@@ -243,10 +239,10 @@ while switch:
 
     hits = pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
     for hit in hits:
-        player.shield -= hit.radius * 2
+        player.shield += hit.damage
         print(player.shield)
         add_mob(hit)
-        if player.shield < 0:
+        if player.shield > 12:
             switch = False
 
     hits = pygame.sprite.groupcollide(mobs, bullets, False, True)
@@ -266,8 +262,8 @@ while switch:
     # display.blit(health_bar.image, (704, 0))
     all_sprites.draw(display)
 
-    draw_text(f'score: {score}', 30, display, 10, 0)
-    draw_bar(display, shield, 12)
+    draw_text(f'score: {score}', 30, display, 10, 15)
+    draw_bar(display, shield, player.shield)
 
     pygame.display.flip()
 
