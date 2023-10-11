@@ -5,6 +5,7 @@ import pygame
 WIDTH = 400
 HEIGHT = 600
 FPS = 60
+LASER_PRICE = 5
 
 pygame.init()
 display = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -19,7 +20,7 @@ class Player(pygame.sprite.Sprite):
         self.image.set_colorkey((0, 0, 0))
         self.rect = self.image.get_rect()
         self.radius = 30
-        self.shield = 1
+        self.shield = 12
 
         self.rect.center = (WIDTH / 2, HEIGHT - 50)
         self.speed_x = 0
@@ -47,7 +48,8 @@ class Bullet(pygame.sprite.Sprite):
         if btype == 'blue':
             self.image = pygame.transform.scale(blue_bullet_img, (10, 25))
         elif btype == 'red':
-            self.image = pygame.transform.scale(red_bullet_img, (15, 30))
+            self.image = pygame.transform.scale(red_bullet_img, (100, 600))
+            self.now = pygame.time.get_ticks()
 
         self.type = btype
         self.image.set_colorkey((0, 0, 0))
@@ -59,9 +61,13 @@ class Bullet(pygame.sprite.Sprite):
         self.damage = random.randrange(30, 51)
 
     def update(self):
-        self.rect.y -= self.speed_y
-        if self.rect.bottom - 5 < 0:
-            self.kill()
+        if self.type == 'blue':
+            self.rect.y -= self.speed_y
+            if self.rect.bottom - 5 < 0:
+                self.kill()
+        elif self.type == 'red':
+            if (pygame.time.get_ticks() - self.now) >= 1000:
+                self.kill()
 
 
 class Mob(pygame.sprite.Sprite):
@@ -107,7 +113,7 @@ class Mob(pygame.sprite.Sprite):
             self.rect.center = old_centre
 
     def update(self):
-        # self.rotate()
+        self.rotate()
 
         self.rect.y += self.speed_y
         self.rect.x += self.speed_x
@@ -132,10 +138,11 @@ def draw_bar(surf, image, healths):
     # первые 2 значения - расстояние от левого края картинки (тут как раз и нужен наш отступ,
     # для нас это количество жизней по факту, и еще кое-что)
     # следующие 2 значения - размеры самой картинки
-    part = image.get_width() / 12
-    offset = image.get_width() - part * player.shield
 
-    surf.blit(image, (230, 10), (offset, 0, part, image.get_height()))
+    part_width = image.get_width() / 12
+    offset_x = part_width * (healths - 1)
+
+    surf.blit(image, (230, 10), (offset_x, 0, part_width, image.get_height()))
 
 
 font_name = pygame.font.match_font('arial')
@@ -148,6 +155,21 @@ def draw_text(text, size, surf, x, y):
     text_rect.x = x
     text_rect.y = y
     surf.blit(text_surf, text_rect)
+
+
+def draw_capabilities():
+    global score
+    if score < LASER_PRICE:
+        display.blit(red_ball, red_rect)
+    else:
+        display.blit(green_ball, green_rect)
+
+
+def create_bullet(btype):
+    bullet = Bullet(player.rect.centerx, player.rect.top, btype)
+    random.choice(shoot_sounds).play()
+    all_sprites.add(bullet)
+    bullets.add(bullet)
 
 
 all_sprites = pygame.sprite.Group()
@@ -163,10 +185,10 @@ blue_bullet_img = pygame.image.load(os.path.join(img_folder, 'laserBlue02.png'))
 red_bullet_img = pygame.image.load(os.path.join(img_folder, 'laserRed04.png')).convert()
 background = pygame.image.load(os.path.join(img_folder, 'blue.png')).convert()
 
-shield = pygame.image.load(os.path.join(img_folder, 'sp_bar_health_strip12.png')).convert()
-shield.set_colorkey((0, 0, 0))
-size = shield.get_size()
-shield = pygame.transform.scale(shield, (size[0] * 2.5, size[1] * 2.5))
+shield_img = pygame.image.load(os.path.join(img_folder, 'sp_bar_health_strip12.png')).convert()
+shield_img.set_colorkey((0, 0, 0))
+size = shield_img.get_size()
+shield_img = pygame.transform.scale(shield_img, (size[0] * 2.5, size[1] * 2.5))
 
 meteor_images = []
 meteor_list = [('meteorBrown_small2.png',
@@ -178,10 +200,24 @@ meteor_list = [('meteorBrown_small2.png',
                ('meteorBrown_big1.png',
                 'meteorBrown_big3.png')]
 
+green_surf = pygame.image.load(os.path.join(img_folder, 'green.png')).convert()
+red_surf = pygame.image.load(os.path.join(img_folder, 'red.png')).convert()
+
+red_ball = pygame.transform.scale(red_surf, (70, 70))
+red_rect = red_surf.get_rect()
+red_rect.center = (300, 160)
+
+green_ball = pygame.transform.scale(green_surf, (70, 70))
+green_rect = green_surf.get_rect()
+green_rect.center = (300, 160)
+
+red_ball.set_colorkey((255, 255, 255))
+green_ball.set_colorkey((255, 255, 255))
+
 shoot_sound_1 = pygame.mixer.Sound(os.path.join(snd_dir, 'Laser_Shoot.wav'))
 shoot_sound_2 = pygame.mixer.Sound(os.path.join(snd_dir, 'Laser_Shoot3.wav'))
 shoot_sound_3 = pygame.mixer.Sound(os.path.join(snd_dir, 'Laser_Shoot4.wav'))
-hit = pygame.mixer.Sound(os.path.join(snd_dir, 'Hit_Hurt.wav'))
+hit_sound = pygame.mixer.Sound(os.path.join(snd_dir, 'Hit_Hurt.wav'))
 
 shoot_sounds = [shoot_sound_1,
                 shoot_sound_2,
@@ -211,6 +247,7 @@ score = 0
 # pygame.mixer.music.play(loops=-1)
 
 switch = True
+
 while switch:
     clock.tick(FPS)
     for event in pygame.event.get():
@@ -219,43 +256,38 @@ while switch:
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_w:
-                if score >= 500:
-                    score -= 500
-
-                    if event.key == pygame.K_s:
-                        bullet = Bullet(player.rect.centerx, player.rect.top, 'red')
-                        random.choice(shoot_sounds).play()
-                        all_sprites.add(bullet)
-                        bullets.add(bullet)
+                if score >= LASER_PRICE:
+                    score -= LASER_PRICE
+                    create_bullet('red')
 
             else:
                 if event.key == pygame.K_s:
-                    bullet = Bullet(player.rect.centerx, player.rect.top, 'blue')
-                    random.choice(shoot_sounds).play()
-                    all_sprites.add(bullet)
-                    bullets.add(bullet)
+                    create_bullet('blue')
 
     all_sprites.update()
 
     hits = pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
     for hit in hits:
-        player.shield += hit.damage
+        player.shield -= hit.damage
         print(player.shield)
         add_mob(hit)
-        if player.shield > 12:
+        if player.shield <= 0:
             switch = False
 
-    hits = pygame.sprite.groupcollide(mobs, bullets, False, True)
-    for i in hits:
-        if hits[i][0].type == 'blue':
-            i.hp -= hits[i][0].damage
-            if i.hp <= 0:
-                add_mob(i)
-                score += 50 - i.radius
-                hit.play()
-        elif hits[i][0].type == 'red':
-            add_mob(i)
-            hit.play()
+    hits = pygame.sprite.groupcollide(mobs, bullets, False, False)
+    for mob in hits:
+        if hits[mob][0].type == 'blue':
+            mob.hp -= hits[mob][0].damage
+            if mob.hp <= 0:
+                add_mob(mob)
+                score += 50 - mob.radius
+                hit_sound.play()
+                hits[mob][0].kill()
+            for b in hits[mob]:
+                b.kill()
+        elif hits[mob][0].type == 'red':
+            add_mob(mob)
+            hit_sound.play()
 
     display.fill((0, 0, 0))
     display.blit(background, background_rect)
@@ -263,7 +295,8 @@ while switch:
     all_sprites.draw(display)
 
     draw_text(f'score: {score}', 30, display, 10, 15)
-    draw_bar(display, shield, player.shield)
+    draw_bar(display, shield_img, player.shield)
+    draw_capabilities()
 
     pygame.display.flip()
 
