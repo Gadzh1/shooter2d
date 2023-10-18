@@ -22,23 +22,48 @@ class Player(pygame.sprite.Sprite):
         self.radius = 30
         self.shield = 12
 
+        self.shoot_delay = 250
+        self.last_shot = pygame.time.get_ticks()
+
         self.rect.center = (WIDTH / 2, HEIGHT - 50)
         self.speed_x = 0
 
     def update(self):
+        global score
         self.speed_x = 0
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_a]:
+        keys_state = pygame.key.get_pressed()
+        if keys_state[pygame.K_a]:
             self.speed_x = -5
-        if keys[pygame.K_d]:
+        if keys_state[pygame.K_d]:
             self.speed_x = 5
         self.rect.x += self.speed_x
+        if keys_state[pygame.K_s]:
+            self.shoot()
+        if keys_state[pygame.K_w]:
+            if score >= LASER_PRICE:
+                score -= LASER_PRICE
+                create_bullet('red')
 
         if self.rect.right + 5 > WIDTH:
             self.rect.x -= 5
 
         if self.rect.left - 5 < 0:
             self.rect.x += 5
+
+    def shoot(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_shot > self.shoot_delay:
+            self.last_shot = now
+            create_bullet('blue')
+
+        # if event.key == pygame.K_w:
+        #     if score >= LASER_PRICE:
+        #         score -= LASER_PRICE
+        #         create_bullet('red')
+        #
+        # else:
+        #     if event.key == pygame.K_s:
+        #         create_bullet('blue')
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -200,6 +225,14 @@ meteor_list = [('meteorBrown_small2.png',
                ('meteorBrown_big1.png',
                 'meteorBrown_big3.png')]
 
+
+explosion_png = []
+
+for i in range(9):
+    filename = f'regularExplosion0{i}.png'
+    explosion_png.append(filename)
+
+
 green_surf = pygame.image.load(os.path.join(img_folder, 'green.png')).convert()
 red_surf = pygame.image.load(os.path.join(img_folder, 'red.png')).convert()
 
@@ -253,16 +286,6 @@ while switch:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             switch = False
-
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_w:
-                if score >= LASER_PRICE:
-                    score -= LASER_PRICE
-                    create_bullet('red')
-
-            else:
-                if event.key == pygame.K_s:
-                    create_bullet('blue')
 
     all_sprites.update()
 
