@@ -144,11 +144,37 @@ class Mob(pygame.sprite.Sprite):
         self.rect.x += self.speed_x
 
         if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:
-            add_mob(self)
+            self.kill()
+            add_mob()
 
 
-def add_mob(i):
-    i.kill()
+class Explosion(pygame.sprite.Sprite):
+    def __init__(self, center, size_name):
+        pygame.sprite.Sprite.__init__(self)
+        self.size_name = size_name
+        self.image = explosion_anim[size_name][0]
+        self.rect = self.image.get_rect()
+        self.rect.center = center
+        self.frame = 0
+        self.last_update = pygame.time.get_ticks()
+        self.frame_rate = 50
+
+    def update(self):
+        now = pygame.time.get_ticks()
+
+        if now - self.last_update >= self.frame_rate:
+            self.last_update = now
+            self.frame += 1
+            if self.frame == len(explosion_anim[self.size_name]):
+                self.kill()
+            else:
+                center = self.rect.center
+                self.image = explosion_anim[self.size_name][self.frame]
+                self.rect = self.image.get_rect()
+                self.rect.center = center
+
+
+def add_mob():
     m = Mob()
     all_sprites.add(m)
     mobs.add(m)
@@ -225,13 +251,19 @@ meteor_list = [('meteorBrown_small2.png',
                ('meteorBrown_big1.png',
                 'meteorBrown_big3.png')]
 
-
-explosion_png = []
+explosion_anim = {}
+explosion_anim['lg'] = []
+explosion_anim['sm'] = []
+img_exp = os.path.join(game_folder, 'img', 'exploation')
 
 for i in range(9):
     filename = f'regularExplosion0{i}.png'
-    explosion_png.append(filename)
-
+    png = pygame.image.load(os.path.join(img_exp, filename)).convert()
+    png.set_colorkey((0, 0, 0))
+    large = pygame.transform.scale(png, (75, 75))
+    explosion_anim['lg'].append(large)
+    small = pygame.transform.scale(png, (75, 75))
+    explosion_anim['sm'].append(small)
 
 green_surf = pygame.image.load(os.path.join(img_folder, 'green.png')).convert()
 red_surf = pygame.image.load(os.path.join(img_folder, 'red.png')).convert()
@@ -293,23 +325,30 @@ while switch:
     for hit in hits:
         player.shield -= hit.damage
         print(player.shield)
-        add_mob(hit)
+        hit.kill()
+        add_mob()
+        exp = Explosion(hit.rect.center, 'sm')
+        all_sprites.add(exp)
         if player.shield <= 0:
             switch = False
 
     hits = pygame.sprite.groupcollide(mobs, bullets, False, False)
-    for mob in hits:
-        if hits[mob][0].type == 'blue':
-            mob.hp -= hits[mob][0].damage
+    for mob, bulls in hits.items():
+        if bulls[0].type == 'blue':
+            mob.hp -= bulls[0].damage
             if mob.hp <= 0:
-                add_mob(mob)
+                mob.kill()
+                add_mob()
                 score += 50 - mob.radius
                 hit_sound.play()
-                hits[mob][0].kill()
+                bulls[0].kill()
+                exp = Explosion(mob.rect.center, 'lg')
+                all_sprites.add(exp)
             for b in hits[mob]:
                 b.kill()
-        elif hits[mob][0].type == 'red':
-            add_mob(mob)
+        elif bulls[0].type == 'red':
+            mob.kill()
+            add_mob()
             hit_sound.play()
 
     display.fill((0, 0, 0))
