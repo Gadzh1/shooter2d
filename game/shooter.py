@@ -99,6 +99,7 @@ class Mob(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         rand_num = random.randrange(0, 3)
+        self.size = rand_num
 
         self.image_orig = random.choice(meteor_images[rand_num])
         self.image_orig.set_colorkey((0, 0, 0))
@@ -260,9 +261,9 @@ for i in range(9):
     filename = f'regularExplosion0{i}.png'
     png = pygame.image.load(os.path.join(img_exp, filename)).convert()
     png.set_colorkey((0, 0, 0))
-    large = pygame.transform.scale(png, (75, 75))
+    large = pygame.transform.scale(png, (100, 100))
     explosion_anim['lg'].append(large)
-    small = pygame.transform.scale(png, (75, 75))
+    small = pygame.transform.scale(png, (60, 60))
     explosion_anim['sm'].append(small)
 
 green_surf = pygame.image.load(os.path.join(img_folder, 'green.png')).convert()
@@ -342,8 +343,15 @@ while switch:
                 score += 50 - mob.radius
                 hit_sound.play()
                 bulls[0].kill()
-                exp = Explosion(mob.rect.center, 'lg')
+
+                if mob.size == 2:
+                    t = 'lg'
+                else:
+                    t = 'sm'
+
+                exp = Explosion(mob.rect.center, t)
                 all_sprites.add(exp)
+
             for b in hits[mob]:
                 b.kill()
         elif bulls[0].type == 'red':
