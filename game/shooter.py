@@ -344,10 +344,11 @@ while switch:
                 hit_sound.play()
                 bulls[0].kill()
 
-                if mob.size == 2:
-                    t = 'lg'
-                else:
+                if 0 <= mob.size < 2:
                     t = 'sm'
+
+                elif mob.size == 2:
+                    t = 'lg'
 
                 exp = Explosion(mob.rect.center, t)
                 all_sprites.add(exp)
