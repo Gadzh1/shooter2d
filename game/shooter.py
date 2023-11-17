@@ -6,6 +6,7 @@ WIDTH = 400
 HEIGHT = 600
 FPS = 60
 LASER_PRICE = 5
+GAME_CHANCES = 3
 
 pygame.init()
 display = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -20,7 +21,7 @@ class Player(pygame.sprite.Sprite):
         self.image.set_colorkey((0, 0, 0))
         self.rect = self.image.get_rect()
         self.radius = 30
-        self.shield = 12
+        self.health = 12
 
         self.shoot_delay = 250
         self.last_shot = pygame.time.get_ticks()
@@ -175,13 +176,22 @@ class Explosion(pygame.sprite.Sprite):
                 self.rect.center = center
 
 
+class Health(pygame.sprite.Sprite):
+    def __init__(self, center):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.transform.scale(player_img, (40, 20))
+        self.rect = self.image.get_rect()
+        self.rect.center = center
+        self.image.set_colorkey((0, 0, 0))
+
+
 def add_mob():
     m = Mob()
     all_sprites.add(m)
     mobs.add(m)
 
 
-def draw_bar(surf, image, healths):
+def draw_bar(surf, image, bar_healths):
     # 1ый кортеж (2 параметра) - расстояние от левого края того экрана, на котором рисуем (то есть это наш главный экран - display)
     # 1 значение - сколько слева отступ
     # 2 значение - сколько вниз отступ
@@ -192,7 +202,7 @@ def draw_bar(surf, image, healths):
     # следующие 2 значения - размеры самой картинки
 
     part_width = image.get_width() / 12
-    offset_x = part_width * (healths - 1)
+    offset_x = part_width * (bar_healths - 1)
 
     surf.blit(image, (230, 10), (offset_x, 0, part_width, image.get_height()))
 
@@ -224,6 +234,7 @@ def create_bullet(btype):
     bullets.add(bullet)
 
 
+chances = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 mobs = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
@@ -291,6 +302,7 @@ shoot_sounds = [shoot_sound_1,
 
 # pygame.mixer.music.load(os.path.join(snd_dir, 'tgfcoder-FrozenJam-SeamlessLoop.ogg'))
 # pygame.mixer.music.set_volume(0.4)
+# pygame.mixer.music.play(loops=-1)
 
 for img in meteor_list:
     temp = []
@@ -299,6 +311,12 @@ for img in meteor_list:
     meteor_images.append(temp)
 
 background_rect = background.get_rect()
+
+chance_x = 410
+for _ in range(3):
+    chance_x -= 50
+    hp = Health((chance_x, 80))
+    chances.add(hp)
 
 for i in range(8):
     mob = Mob()
@@ -309,8 +327,6 @@ player = Player()
 all_sprites.add(player)
 
 score = 0
-
-# pygame.mixer.music.play(loops=-1)
 
 switch = True
 
@@ -324,14 +340,27 @@ while switch:
 
     hits = pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
     for hit in hits:
-        player.shield -= hit.damage
-        print(player.shield)
+        player.health -= hit.damage
+        print(player.health)
         hit.kill()
         add_mob()
         exp = Explosion(hit.rect.center, 'sm')
         all_sprites.add(exp)
-        if player.shield <= 0:
-            switch = False
+
+        if player.health <= 0:
+            if GAME_CHANCES == 1:
+                switch = False
+            else:
+                chances.empty()
+                GAME_CHANCES -= 1
+
+                chance_x = 410
+                for i in range(GAME_CHANCES):
+                    chance_x -= 50
+                    hp = Health((chance_x, 80))
+                    chances.add(hp)
+
+                player.health = 12
 
     hits = pygame.sprite.groupcollide(mobs, bullets, False, False)
     for mob, bulls in hits.items():
@@ -364,9 +393,10 @@ while switch:
     display.blit(background, background_rect)
     # display.blit(health_bar.image, (704, 0))
     all_sprites.draw(display)
+    chances.draw(display)
 
     draw_text(f'score: {score}', 30, display, 10, 15)
-    draw_bar(display, shield_img, player.shield)
+    draw_bar(display, shield_img, player.health)
     draw_capabilities()
 
     pygame.display.flip()
