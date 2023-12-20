@@ -4,6 +4,7 @@ import pygame
 from bullet import create_bullet
 from mob import Mob
 from player import Player
+from explosion import Explosion
 
 WIDTH = 400
 HEIGHT = 600
@@ -25,32 +26,6 @@ def shoot():
     if now - LAST_SHOT > SHOOT_DELAY:
         LAST_SHOT = now
         create_bullet('blue', player, shoot_sounds, all_sprites, bullets)
-
-
-class Explosion(pygame.sprite.Sprite):
-    def __init__(self, center, size_name):
-        pygame.sprite.Sprite.__init__(self)
-        self.size_name = size_name
-        self.image = explosion_anim[size_name][0]
-        self.rect = self.image.get_rect()
-        self.rect.center = center
-        self.frame = 0
-        self.last_update = pygame.time.get_ticks()
-        self.frame_rate = 50
-
-    def update(self):
-        now = pygame.time.get_ticks()
-
-        if now - self.last_update >= self.frame_rate:
-            self.last_update = now
-            self.frame += 1
-            if self.frame == len(explosion_anim[self.size_name]):
-                self.kill()
-            else:
-                center = self.rect.center
-                self.image = explosion_anim[self.size_name][self.frame]
-                self.rect = self.image.get_rect()
-                self.rect.center = center
 
 
 class Health(pygame.sprite.Sprite):
@@ -132,20 +107,6 @@ meteor_list = [('meteorBrown_small2.png',
 
                ('meteorBrown_big1.png',
                 'meteorBrown_big3.png')]
-
-explosion_anim = {}
-explosion_anim['lg'] = []
-explosion_anim['sm'] = []
-img_exp = os.path.join(game_folder, 'img', 'exploation')
-
-for i in range(9):
-    filename = f'regularExplosion0{i}.png'
-    png = pygame.image.load(os.path.join(img_exp, filename)).convert()
-    png.set_colorkey((0, 0, 0))
-    large = pygame.transform.scale(png, (100, 100))
-    explosion_anim['lg'].append(large)
-    small = pygame.transform.scale(png, (60, 60))
-    explosion_anim['sm'].append(small)
 
 green_surf = pygame.image.load(os.path.join(img_folder, 'green.png')).convert()
 red_surf = pygame.image.load(os.path.join(img_folder, 'red.png')).convert()
