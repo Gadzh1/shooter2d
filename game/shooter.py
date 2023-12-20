@@ -1,12 +1,16 @@
 import os
 import random
 import pygame
+from bullet import create_bullet
+from player import Player
 
 WIDTH = 400
 HEIGHT = 600
 FPS = 60
 LASER_PRICE = 5
 GAME_CHANCES = 3
+SHOOT_DELAY = 250
+LAST_SHOT = pygame.time.get_ticks()
 
 pygame.init()
 display = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -14,86 +18,12 @@ pygame.display.set_caption('test')
 clock = pygame.time.Clock()
 
 
-class Player(pygame.sprite.Sprite):
-    def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.transform.scale(player_img, (70, 50))
-        self.image.set_colorkey((0, 0, 0))
-        self.rect = self.image.get_rect()
-        self.radius = 30
-        self.health = 12
-
-        self.shoot_delay = 250
-        self.last_shot = pygame.time.get_ticks()
-
-        self.rect.center = (WIDTH / 2, HEIGHT - 50)
-        self.speed_x = 0
-
-    def update(self):
-        global score
-        self.speed_x = 0
-        keys_state = pygame.key.get_pressed()
-        if keys_state[pygame.K_a]:
-            self.speed_x = -5
-        if keys_state[pygame.K_d]:
-            self.speed_x = 5
-        self.rect.x += self.speed_x
-        if keys_state[pygame.K_s]:
-            self.shoot()
-        if keys_state[pygame.K_w]:
-            if score >= LASER_PRICE:
-                score -= LASER_PRICE
-                create_bullet('red')
-
-        if self.rect.right + 5 > WIDTH:
-            self.rect.x -= 5
-
-        if self.rect.left - 5 < 0:
-            self.rect.x += 5
-
-    def shoot(self):
-        now = pygame.time.get_ticks()
-        if now - self.last_shot > self.shoot_delay:
-            self.last_shot = now
-            create_bullet('blue')
-
-        # if event.key == pygame.K_w:
-        #     if score >= LASER_PRICE:
-        #         score -= LASER_PRICE
-        #         create_bullet('red')
-        #
-        # else:
-        #     if event.key == pygame.K_s:
-        #         create_bullet('blue')
-
-
-class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y, btype='blue'):
-        pygame.sprite.Sprite.__init__(self)
-
-        if btype == 'blue':
-            self.image = pygame.transform.scale(blue_bullet_img, (10, 25))
-        elif btype == 'red':
-            self.image = pygame.transform.scale(red_bullet_img, (100, 600))
-            self.now = pygame.time.get_ticks()
-
-        self.type = btype
-        self.image.set_colorkey((0, 0, 0))
-        self.rect = self.image.get_rect()
-        self.rect.centerx = x
-        self.rect.bottom = y
-        self.speed_y = 5
-
-        self.damage = random.randrange(30, 51)
-
-    def update(self):
-        if self.type == 'blue':
-            self.rect.y -= self.speed_y
-            if self.rect.bottom - 5 < 0:
-                self.kill()
-        elif self.type == 'red':
-            if (pygame.time.get_ticks() - self.now) >= 1000:
-                self.kill()
+def shoot():
+    global LAST_SHOT
+    now = pygame.time.get_ticks()
+    if now - LAST_SHOT > SHOOT_DELAY:
+        LAST_SHOT = now
+        create_bullet('blue', player, shoot_sounds, all_sprites, bullets)
 
 
 class Mob(pygame.sprite.Sprite):
@@ -227,13 +157,6 @@ def draw_capabilities():
         display.blit(green_ball, green_rect)
 
 
-def create_bullet(btype):
-    bullet = Bullet(player.rect.centerx, player.rect.top, btype)
-    random.choice(shoot_sounds).play()
-    all_sprites.add(bullet)
-    bullets.add(bullet)
-
-
 chances = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 mobs = pygame.sprite.Group()
@@ -335,6 +258,15 @@ while switch:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             switch = False
+
+    keys_state = pygame.key.get_pressed()
+
+    if keys_state[pygame.K_s]:
+        shoot()
+    if keys_state[pygame.K_w]:
+        if score >= LASER_PRICE:
+            score -= LASER_PRICE
+            create_bullet('red', player, shoot_sounds, all_sprites, bullets)
 
     all_sprites.update()
 
