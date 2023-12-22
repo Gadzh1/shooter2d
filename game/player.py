@@ -1,15 +1,9 @@
 import os
 import pygame
-from bullet import create_bullet
-# from shooter import player, shoot_sounds, all_sprites, bullets
 
-WIDTH = 400
-HEIGHT = 600
-LASER_PRICE = 5
+from constants import WIDTH, HEIGHT, IMG_FOLDER
 
-game_folder = os.path.dirname(__file__)
-img_folder = os.path.join(game_folder, 'img')
-player_img = pygame.image.load(os.path.join(img_folder, 'playerShip2_blue.png')).convert()
+player_img = pygame.image.load(os.path.join(IMG_FOLDER, 'playerShip2_blue.png')).convert()
 
 
 class Player(pygame.sprite.Sprite):
@@ -42,5 +36,3 @@ class Player(pygame.sprite.Sprite):
 
         if self.rect.left - 5 < 0:
             self.rect.x += 5
-
-

@@ -2,11 +2,7 @@ import os
 import random
 import pygame
 
-WIDTH = 400
-HEIGHT = 600
-
-game_folder = os.path.dirname(__file__)
-img_folder = os.path.join(game_folder, 'img')
+from constants import WIDTH, IMG_FOLDER
 
 meteor_images = []
 meteor_list = [('meteorBrown_small2.png',
@@ -21,7 +17,7 @@ meteor_list = [('meteorBrown_small2.png',
 for img in meteor_list:
     temp = []
     for i in img:
-        temp.append(pygame.image.load(os.path.join(img_folder, i)).convert())
+        temp.append(pygame.image.load(os.path.join(IMG_FOLDER, i)).convert())
     meteor_images.append(temp)
 
 

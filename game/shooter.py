@@ -1,23 +1,24 @@
-import os
-import pygame
+import random
 
-from bullet import create_bullet
+from constants import *
+from bullet import Bullet
 from mob import Mob
 from player import Player
 from explosion import Explosion
+from health import Health
 
-WIDTH = 400
-HEIGHT = 600
-FPS = 60
-LASER_PRICE = 5
-GAME_CHANCES = 3
-SHOOT_DELAY = 250
-LAST_SHOT = pygame.time.get_ticks()
 
 pygame.init()
 display = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('test')
 clock = pygame.time.Clock()
+
+
+def create_bullet(btype, player, shoot_sounds, all_sprites, bullets):
+    bullet = Bullet(player.rect.centerx, player.rect.top, btype)
+    random.choice(shoot_sounds).play()
+    all_sprites.add(bullet)
+    bullets.add(bullet)
 
 
 def shoot():
@@ -28,15 +29,6 @@ def shoot():
         create_bullet('blue', player, shoot_sounds, all_sprites, bullets)
 
 
-class Health(pygame.sprite.Sprite):
-    def __init__(self, center):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.transform.scale(player_img, (40, 20))
-        self.rect = self.image.get_rect()
-        self.rect.center = center
-        self.image.set_colorkey((0, 0, 0))
-
-
 def add_mob():
     m = Mob()
     all_sprites.add(m)
@@ -44,15 +36,6 @@ def add_mob():
 
 
 def draw_bar(surf, image, bar_healths):
-    # 1ый кортеж (2 параметра) - расстояние от левого края того экрана, на котором рисуем (то есть это наш главный экран - display)
-    # 1 значение - сколько слева отступ
-    # 2 значение - сколько вниз отступ
-
-    # 2ой кортеж (4 параметра)
-    # первые 2 значения - расстояние от левого края картинки (тут как раз и нужен наш отступ,
-    # для нас это количество жизней по факту, и еще кое-что)
-    # следующие 2 значения - размеры самой картинки
-
     part_width = image.get_width() / 12
     offset_x = part_width * (bar_healths - 1)
 
@@ -88,25 +71,12 @@ game_folder = os.path.dirname(__file__)
 img_folder = os.path.join(game_folder, 'img')
 snd_dir = os.path.join(game_folder, 'snd')
 
-player_img = pygame.image.load(os.path.join(img_folder, 'playerShip2_blue.png')).convert()
-blue_bullet_img = pygame.image.load(os.path.join(img_folder, 'laserBlue02.png')).convert()
-red_bullet_img = pygame.image.load(os.path.join(img_folder, 'laserRed04.png')).convert()
 background = pygame.image.load(os.path.join(img_folder, 'blue.png')).convert()
 
 shield_img = pygame.image.load(os.path.join(img_folder, 'sp_bar_health_strip12.png')).convert()
 shield_img.set_colorkey((0, 0, 0))
 size = shield_img.get_size()
 shield_img = pygame.transform.scale(shield_img, (size[0] * 2.5, size[1] * 2.5))
-
-meteor_images = []
-meteor_list = [('meteorBrown_small2.png',
-                'meteorBrown_small1.png'),
-
-               ('meteorBrown_med1.png',
-                'meteorBrown_med3.png'),
-
-               ('meteorBrown_big1.png',
-                'meteorBrown_big3.png')]
 
 green_surf = pygame.image.load(os.path.join(img_folder, 'green.png')).convert()
 red_surf = pygame.image.load(os.path.join(img_folder, 'red.png')).convert()
@@ -135,11 +105,6 @@ shoot_sounds = [shoot_sound_1,
 # pygame.mixer.music.set_volume(0.4)
 # pygame.mixer.music.play(loops=-1)
 
-for img in meteor_list:
-    temp = []
-    for i in img:
-        temp.append(pygame.image.load(os.path.join(img_folder, i)).convert())
-    meteor_images.append(temp)
 
 background_rect = background.get_rect()
 
@@ -236,7 +201,6 @@ while switch:
 
     display.fill((0, 0, 0))
     display.blit(background, background_rect)
-    # display.blit(health_bar.image, (704, 0))
     all_sprites.draw(display)
     chances.draw(display)
 

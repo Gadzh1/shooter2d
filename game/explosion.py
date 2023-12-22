@@ -1,10 +1,11 @@
 import os
 import pygame
 
+from  constants import GAME_FOLDER
+
 explosion_anim = {'lg': [], 'sm': []}
-game_folder = os.path.dirname(__file__)
-img_folder = os.path.join(game_folder, 'img')
-img_exp = os.path.join(game_folder, 'img', 'exploation')
+
+img_exp = os.path.join(GAME_FOLDER, 'img', 'exploation')
 
 for i in range(9):
     filename = f'regularExplosion0{i}.png'
