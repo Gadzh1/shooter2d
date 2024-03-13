@@ -21,7 +21,7 @@ for img in meteor_list:
     meteor_images.append(temp)
 
 
-class Mob(pygame.sprite.Sprite):
+class Meteor(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         rand_num = random.randrange(0, 3)

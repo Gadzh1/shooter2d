@@ -6,6 +6,8 @@ FPS = 60
 LASER_PRICE = 5
 GAME_CHANCES = 3
 SHOOT_DELAY = 250
+ENEMYS_AMOUNT = 0
+METEORS_AMOUNT = 8
 
 GAME_FOLDER = os.path.dirname(__file__)
 IMG_FOLDER = os.path.join(GAME_FOLDER, 'img')

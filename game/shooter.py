@@ -3,10 +3,11 @@ import random
 
 from constants import *
 from bullet import Bullet
-from mob import Mob
+from meteor import Meteor
 from player import Player
 from explosion import Explosion
 from health import Health
+from enemy import Enemy, action_basic, action_zigzag
 
 
 def create_bullet(btype, player, shoot_sounds, all_sprites, bullets):
@@ -24,10 +25,25 @@ def shoot():
         create_bullet('blue', player, shoot_sounds, all_sprites, bullets)
 
 
-def add_mob():
-    m = Mob()
-    all_sprites.add(m)
-    mobs.add(m)
+def add_meteor():
+    global current_meteors
+    print('meteors: ' + str(len(meteors)))
+    print('all sprites: ' + str(len(all_sprites)))
+
+    if len(meteors) <= METEORS_AMOUNT:
+        m = Meteor()
+        all_sprites.add(m)
+        meteors.add(m)
+        # current_meteors += 1
+
+
+def kill_meteor(m):
+    global current_meteors
+
+    m.kill()
+
+    # if current_meteors > 0:
+    #     current_meteors -= 1
 
 
 def draw_bar(surf, image, bar_healths):
@@ -49,9 +65,9 @@ def draw_text(text, size, surf, x, y):
 def draw_capabilities():
     global score
     if score < LASER_PRICE:
-        display.blit(red_ball, red_rect)
+        display.blit(red_circle, red_rect)
     else:
-        display.blit(green_ball, green_rect)
+        display.blit(green_circle, green_rect)
 
 
 def check_keys_state():
@@ -65,6 +81,33 @@ def check_keys_state():
             create_bullet('red', player, shoot_sounds, all_sprites, bullets)
 
 
+def create_entity():
+    chance_x = 410
+
+    for _ in range(3):
+        chance_x -= 50
+        hp = Health((chance_x, 80))
+        chances.add(hp)
+
+    for i in range(METEORS_AMOUNT):
+        global current_meteors
+
+        mob = Meteor()
+        all_sprites.add(mob)
+        meteors.add(mob)
+        current_meteors += 1
+
+    global player
+    player = Player()
+    all_sprites.add(player)
+
+    # enemy = Enemy()
+    # all_sprites.add(enemy)
+    # meteors.add(enemy)
+
+
+player = object()
+
 last_shot = pygame.time.get_ticks()
 
 pygame.init()
@@ -76,7 +119,7 @@ font_name = pygame.font.match_font('arial')
 
 chances = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
-mobs = pygame.sprite.Group()
+meteors = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 
 snd_dir = os.path.join(GAME_FOLDER, 'snd')
@@ -91,16 +134,16 @@ shield_img = pygame.transform.scale(shield_img, (size[0] * 2.5, size[1] * 2.5))
 green_surf = pygame.image.load(os.path.join(IMG_FOLDER, 'green.png')).convert()
 red_surf = pygame.image.load(os.path.join(IMG_FOLDER, 'red.png')).convert()
 
-red_ball = pygame.transform.scale(red_surf, (70, 70))
+red_circle = pygame.transform.scale(red_surf, (70, 70))
 red_rect = red_surf.get_rect()
 red_rect.center = (300, 160)
 
-green_ball = pygame.transform.scale(green_surf, (70, 70))
+green_circle = pygame.transform.scale(green_surf, (70, 70))
 green_rect = green_surf.get_rect()
 green_rect.center = (300, 160)
 
-red_ball.set_colorkey((255, 255, 255))
-green_ball.set_colorkey((255, 255, 255))
+red_circle.set_colorkey((255, 255, 255))
+green_circle.set_colorkey((255, 255, 255))
 
 shoot_sound_1 = pygame.mixer.Sound(os.path.join(snd_dir, 'Laser_Shoot.wav'))
 shoot_sound_2 = pygame.mixer.Sound(os.path.join(snd_dir, 'Laser_Shoot3.wav'))
@@ -118,22 +161,14 @@ shoot_sounds = [shoot_sound_1,
 
 background_rect = background.get_rect()
 
-chance_x = 410
-for _ in range(3):
-    chance_x -= 50
-    hp = Health((chance_x, 80))
-    chances.add(hp)
-
-for i in range(8):
-    mob = Mob()
-    all_sprites.add(mob)
-    mobs.add(mob)
-
-player = Player()
-all_sprites.add(player)
+current_meteors = 0
+create_entity()
 
 score = 0
 switch = True
+last_enemy_created = 0
+enemy_interval = random.randint(7000, 15000)
+enemy_interval = 1000
 
 while switch:
     clock.tick(FPS)
@@ -143,19 +178,25 @@ while switch:
 
     check_keys_state()
 
-    for i in mobs:
+    for i in meteors:
         if i.rect.top > HEIGHT or i.rect.right < 0 or i.rect.left > WIDTH:
-            i.kill()
-            add_mob()
+            kill_meteor(i)
+            add_meteor()
 
     all_sprites.update()
 
-    hits = pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
+    time = pygame.time.get_ticks()
+    if time - last_enemy_created >= enemy_interval:
+        last_enemy_created = time - 1
+        enemy_obj = Enemy(5, 5, WIDTH / 2, -50)
+        all_sprites.add(enemy_obj)
+        meteors.add(enemy_obj)
+
+    hits = pygame.sprite.spritecollide(player, meteors, True, pygame.sprite.collide_circle)
     for hit in hits:
         player.health -= hit.damage
-        print(player.health)
-        hit.kill()
-        add_mob()
+        kill_meteor(hit)
+        add_meteor()
         exp = Explosion(hit.rect.center, 'sm')
         all_sprites.add(exp)
 
@@ -174,32 +215,36 @@ while switch:
 
                 player.health = 12
 
-    hits = pygame.sprite.groupcollide(mobs, bullets, False, False)
+    hits = pygame.sprite.groupcollide(meteors, bullets, False, False)
     for mob, bulls in hits.items():
-        if bulls[0].type == 'blue':
-            mob.hp -= bulls[0].damage
-            if mob.hp <= 0:
-                mob.kill()
-                add_mob()
-                score += 50 - mob.radius
+        for b in bulls:
+
+            if b.type == 'red':
+                kill_meteor(mob)
+                print('------')
+                print('after kill ' + str(current_meteors))
                 hit_sound.play()
-                bulls[0].kill()
+                add_meteor()
+                print('after add ' + str(current_meteors))
+                break
 
-                if 0 <= mob.size < 2:
-                    t = 'sm'
+            if b.type == 'blue':
+                mob.hp -= b.damage
+                if mob.hp <= 0:
+                    kill_meteor(mob)
+                    add_meteor()
+                    score += 50 - mob.radius
+                    hit_sound.play()
 
-                elif mob.size == 2:
-                    t = 'lg'
+                    if 0 <= mob.size < 2:
+                        t = 'sm'
+                    else:
+                        t = 'lg'
 
-                exp = Explosion(mob.rect.center, t)
-                all_sprites.add(exp)
+                    exp = Explosion(mob.rect.center, t)
+                    all_sprites.add(exp)
 
-            for b in hits[mob]:
                 b.kill()
-        elif bulls[0].type == 'red':
-            mob.kill()
-            add_mob()
-            hit_sound.play()
 
     display.fill((0, 0, 0))
     display.blit(background, background_rect)
