@@ -1,5 +1,4 @@
 import pygame
-import random
 
 from constants import *
 from bullet import Bullet
@@ -12,7 +11,7 @@ from enemy import Enemy, action_basic, action_zigzag
 
 def create_bullet(btype, player, shoot_sounds, all_sprites, bullets):
     bullet = Bullet(player.rect.centerx, player.rect.top, btype)
-    random.choice(shoot_sounds).play()
+    # random.choice(shoot_sounds).play()
     all_sprites.add(bullet)
     bullets.add(bullet)
 
@@ -25,25 +24,11 @@ def shoot():
         create_bullet('blue', player, shoot_sounds, all_sprites, bullets)
 
 
-def add_meteor():
-    global current_meteors
-    print('meteors: ' + str(len(meteors)))
-    print('all sprites: ' + str(len(all_sprites)))
-
+def create_meteor():
     if len(meteors) <= METEORS_AMOUNT:
         m = Meteor()
         all_sprites.add(m)
         meteors.add(m)
-        # current_meteors += 1
-
-
-def kill_meteor(m):
-    global current_meteors
-
-    m.kill()
-
-    # if current_meteors > 0:
-    #     current_meteors -= 1
 
 
 def draw_bar(surf, image, bar_healths):
@@ -53,8 +38,8 @@ def draw_bar(surf, image, bar_healths):
     surf.blit(image, (230, 10), (offset_x, 0, part_width, image.get_height()))
 
 
-def draw_text(text, size, surf, x, y):
-    font = pygame.font.Font(font_name, size)
+def draw_text(text, size_value, surf, x, y):
+    font = pygame.font.Font(font_name, size_value)
     text_surf = font.render(text, True, (255, 255, 255))
     text_rect = text_surf.get_rect()
     text_rect.x = x
@@ -72,6 +57,7 @@ def draw_capabilities():
 
 def check_keys_state():
     global score
+
     keys_state = pygame.key.get_pressed()
     if keys_state[pygame.K_s]:
         shoot()
@@ -90,12 +76,9 @@ def create_entity():
         chances.add(hp)
 
     for i in range(METEORS_AMOUNT):
-        global current_meteors
-
         mob = Meteor()
         all_sprites.add(mob)
         meteors.add(mob)
-        current_meteors += 1
 
     global player
     player = Player()
@@ -106,6 +89,77 @@ def create_entity():
     # meteors.add(enemy)
 
 
+def collide_player_to_obj(player_obj, meteors_gr):
+    global GAME_CHANCES, is_playing
+
+    hit_meteors = pygame.sprite.spritecollide(player_obj, meteors_gr, True, pygame.sprite.collide_circle)
+    for m in hit_meteors:
+        player_obj.health -= m.damage
+        m.kill()
+        create_meteor()
+        exp = Explosion(m.rect.center, 'sm')
+        all_sprites.add(exp)
+
+        if player_obj.health <= 0:
+            if GAME_CHANCES == 1:
+                is_playing = False
+            else:
+                chances.empty()
+                GAME_CHANCES -= 1
+
+                chance_x = 410
+                for i in range(GAME_CHANCES):
+                    chance_x -= 50
+                    hp = Health((chance_x, 80))
+                    chances.add(hp)
+
+                player_obj.health = 12
+
+
+def collide_bullets_to_obj(bullets_gr, meteors_gr):
+    global score
+
+    hits = pygame.sprite.groupcollide(meteors_gr, bullets_gr, False, False)
+    for meteor, bulls in hits.items():
+        for b in bulls:
+
+            if b.type == 'red':
+                meteor.kill()
+                # hit_sound.play()
+                create_meteor()
+                break
+
+            if b.type == 'blue':
+                meteor.hp -= b.damage
+                if meteor.hp <= 0:
+                    meteor.kill()
+                    create_meteor()
+                    score += 50 - meteor.radius
+                    # hit_sound.play()
+
+                    if 0 <= meteor.size < 2:
+                        t = 'sm'
+                    else:
+                        t = 'lg'
+
+                    exp = Explosion(meteor.rect.center, t)
+                    all_sprites.add(exp)
+
+            b.kill()
+
+
+def create_enemy():
+    global last_enemy_created
+
+    time = pygame.time.get_ticks()
+    if time - last_enemy_created >= enemy_interval:
+        last_enemy_created = time - 1
+        enemy = Enemy(5, 5, WIDTH / 2, -50)
+        all_sprites.add(enemy)
+        enemies.add(enemy)
+
+
+# start of the main ------------------------------
 player = object()
 
 last_shot = pygame.time.get_ticks()
@@ -120,6 +174,7 @@ font_name = pygame.font.match_font('arial')
 chances = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 meteors = pygame.sprite.Group()
+enemies = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 
 snd_dir = os.path.join(GAME_FOLDER, 'snd')
@@ -161,90 +216,37 @@ shoot_sounds = [shoot_sound_1,
 
 background_rect = background.get_rect()
 
-current_meteors = 0
 create_entity()
 
 score = 0
-switch = True
+is_playing = True
 last_enemy_created = 0
-enemy_interval = random.randint(7000, 15000)
+# enemy_interval = random.randint(7000, 15000)
 enemy_interval = 1000
 
-while switch:
+while is_playing:
     clock.tick(FPS)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            switch = False
+            is_playing = False
 
     check_keys_state()
 
-    for i in meteors:
-        if i.rect.top > HEIGHT or i.rect.right < 0 or i.rect.left > WIDTH:
-            kill_meteor(i)
-            add_meteor()
+    for m in meteors:
+        if m.rect.top > HEIGHT or m.rect.right < 0 or m.rect.left > WIDTH:
+            m.kill()
+            create_meteor()
 
     all_sprites.update()
 
-    time = pygame.time.get_ticks()
-    if time - last_enemy_created >= enemy_interval:
-        last_enemy_created = time - 1
-        enemy_obj = Enemy(5, 5, WIDTH / 2, -50)
-        all_sprites.add(enemy_obj)
-        meteors.add(enemy_obj)
+    create_enemy()
 
-    hits = pygame.sprite.spritecollide(player, meteors, True, pygame.sprite.collide_circle)
-    for hit in hits:
-        player.health -= hit.damage
-        kill_meteor(hit)
-        add_meteor()
-        exp = Explosion(hit.rect.center, 'sm')
-        all_sprites.add(exp)
-
-        if player.health <= 0:
-            if GAME_CHANCES == 1:
-                switch = False
-            else:
-                chances.empty()
-                GAME_CHANCES -= 1
-
-                chance_x = 410
-                for i in range(GAME_CHANCES):
-                    chance_x -= 50
-                    hp = Health((chance_x, 80))
-                    chances.add(hp)
-
-                player.health = 12
-
-    hits = pygame.sprite.groupcollide(meteors, bullets, False, False)
-    for mob, bulls in hits.items():
-        for b in bulls:
-
-            if b.type == 'red':
-                kill_meteor(mob)
-                print('------')
-                print('after kill ' + str(current_meteors))
-                hit_sound.play()
-                add_meteor()
-                print('after add ' + str(current_meteors))
-                break
-
-            if b.type == 'blue':
-                mob.hp -= b.damage
-                if mob.hp <= 0:
-                    kill_meteor(mob)
-                    add_meteor()
-                    score += 50 - mob.radius
-                    hit_sound.play()
-
-                    if 0 <= mob.size < 2:
-                        t = 'sm'
-                    else:
-                        t = 'lg'
-
-                    exp = Explosion(mob.rect.center, t)
-                    all_sprites.add(exp)
-
-                b.kill()
+    # collides ------------------------
+    collide_player_to_obj(player, meteors)
+    collide_player_to_obj(player, enemies)
+    collide_bullets_to_obj(bullets, meteors)
+    collide_bullets_to_obj(bullets, enemies)
+    # ---------------------------------
 
     display.fill((0, 0, 0))
     display.blit(background, background_rect)
