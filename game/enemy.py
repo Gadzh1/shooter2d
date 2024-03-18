@@ -1,7 +1,6 @@
 import os
 import random
 import pygame
-import time
 
 from constants import IMG_FOLDER, WIDTH, HEIGHT
 
@@ -55,17 +54,14 @@ class Enemy(pygame.sprite.Sprite):
 
         if action_order == 2:
             self.rect.x += x * self.x_direction
-            # print(self.rect.left, self.rect.right, self.rect.x)
 
             if self.rect.right > WIDTH:
-                print("right")
                 self.x_direction = -1
                 self.rect.right = WIDTH
                 count -= 1
                 return
 
             if self.rect.left < 0:
-                print("left")
                 self.x_direction = 1
                 self.rect.left = 0
                 count -= 1
