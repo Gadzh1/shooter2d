@@ -49,6 +49,7 @@ def draw_text(text, size_value, surf, x, y):
 
 def draw_capabilities():
     global score
+
     if score < LASER_PRICE:
         display.blit(red_circle, red_rect)
     else:
@@ -67,10 +68,10 @@ def check_keys_state():
             create_bullet('red', player, shoot_sounds, all_sprites, bullets)
 
 
-def create_entity():
+def create_basic_entities():
     chance_x = 410
 
-    for _ in range(3):
+    for _ in range(HEALTH_AMOUNT):
         chance_x -= 50
         hp = Health((chance_x, 80))
         chances.add(hp)
@@ -83,10 +84,6 @@ def create_entity():
     global player
     player = Player()
     all_sprites.add(player)
-
-    # enemy = Enemy()
-    # all_sprites.add(enemy)
-    # meteors.add(enemy)
 
 
 def collide_player_to_obj(player_obj, meteors_gr):
@@ -154,7 +151,7 @@ def create_enemy():
     time = pygame.time.get_ticks()
     if time - last_enemy_created >= enemy_interval:
         last_enemy_created = time - 1
-        enemy = Enemy(5, 5, WIDTH / 2, -50)
+        enemy = Enemy(3, 5, WIDTH / 2, -50)
         all_sprites.add(enemy)
         enemies.add(enemy)
 
@@ -171,14 +168,14 @@ clock = pygame.time.Clock()
 
 font_name = pygame.font.match_font('arial')
 
+# groups ------------------------
 chances = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 meteors = pygame.sprite.Group()
 enemies = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 
-snd_dir = os.path.join(GAME_FOLDER, 'snd')
-
+# images ------------------------
 background = pygame.image.load(os.path.join(IMG_FOLDER, 'blue.png')).convert()
 
 shield_img = pygame.image.load(os.path.join(IMG_FOLDER, 'sp_bar_health_strip12.png')).convert()
@@ -200,6 +197,8 @@ green_rect.center = (300, 160)
 red_circle.set_colorkey((255, 255, 255))
 green_circle.set_colorkey((255, 255, 255))
 
+# sounds ------------------------
+snd_dir = os.path.join(GAME_FOLDER, 'snd')
 shoot_sound_1 = pygame.mixer.Sound(os.path.join(snd_dir, 'Laser_Shoot.wav'))
 shoot_sound_2 = pygame.mixer.Sound(os.path.join(snd_dir, 'Laser_Shoot3.wav'))
 shoot_sound_3 = pygame.mixer.Sound(os.path.join(snd_dir, 'Laser_Shoot4.wav'))
@@ -208,15 +207,14 @@ hit_sound = pygame.mixer.Sound(os.path.join(snd_dir, 'Hit_Hurt.wav'))
 shoot_sounds = [shoot_sound_1,
                 shoot_sound_2,
                 shoot_sound_3]
-
 # pygame.mixer.music.load(os.path.join(snd_dir, 'tgfcoder-FrozenJam-SeamlessLoop.ogg'))
 # pygame.mixer.music.set_volume(0.4)
 # pygame.mixer.music.play(loops=-1)
+# ---------------------------------
 
 
 background_rect = background.get_rect()
-
-create_entity()
+create_basic_entities()
 
 score = 0
 is_playing = True
@@ -237,9 +235,9 @@ while is_playing:
             m.kill()
             create_meteor()
 
-    all_sprites.update()
-
     create_enemy()
+
+    all_sprites.update()
 
     # collides ------------------------
     collide_player_to_obj(player, meteors)
