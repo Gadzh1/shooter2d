@@ -7,6 +7,7 @@ from meteor import Meteor
 from player import Player
 from explosion import Explosion
 from health import Health
+from powerup import Powerup
 from enemy import Enemy, action_basic, action_zigzag
 
 
@@ -34,7 +35,7 @@ def add_meteor():
         m = Meteor()
         all_sprites.add(m)
         meteors.add(m)
-        # current_meteors += 1
+        current_meteors += 1
 
 
 def kill_meteor(m):
@@ -121,6 +122,7 @@ chances = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 meteors = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
+powerups = pygame.sprite.Group()
 
 snd_dir = os.path.join(GAME_FOLDER, 'snd')
 
@@ -231,6 +233,9 @@ while switch:
             if b.type == 'blue':
                 mob.hp -= b.damage
                 if mob.hp <= 0:
+                    x = mob.rect.x
+                    y = mob.rect.y
+
                     kill_meteor(mob)
                     add_meteor()
                     score += 50 - mob.radius
@@ -244,7 +249,26 @@ while switch:
                     exp = Explosion(mob.rect.center, t)
                     all_sprites.add(exp)
 
+                    num = random.randint(0, 3)
+                    if num:
+                        if num == 1:
+                            powerup = Powerup(x, y, 'shield')
+                            powerups.add(powerup)
+                            all_sprites.add(powerup)
+                        else:
+                            powerup = Powerup(mob.rect.x, mob.rect.y, 'gun')
+                            powerups.add(powerup)
+                            all_sprites.add(powerup)
+
                 b.kill()
+
+    hits = pygame.sprite.groupcollide(player, powerups, False, False)
+    for player, power in hits.items():
+        if power.type == 'shield':
+            player.health += random.randint()
+
+            # power.kill()
+
 
     display.fill((0, 0, 0))
     display.blit(background, background_rect)
