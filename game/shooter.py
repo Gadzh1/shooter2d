@@ -264,11 +264,6 @@ while switch:
 
     # hits = pygame.sprite.groupcollide(player, powerups, False, False)
     # for player, power in hits.items():
-    #     if power.type == 'shield':
-    #         player.health += random.randint()
-
-            # power.kill()
-
 
     display.fill((0, 0, 0))
     display.blit(background, background_rect)
