@@ -2,6 +2,7 @@ import os
 import pygame
 
 from constants import IMG_FOLDER
+
 player_img = pygame.image.load(os.path.join(IMG_FOLDER, 'playerShip2_blue.png')).convert()
 
 

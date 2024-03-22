@@ -34,12 +34,12 @@ player_img = pygame.image.load(os.path.join(img_folder, 'playerShip2_blue.png'))
 player = Player()
 group_sprite.add(player)
 
-switch = True
-while switch:
+is_playing = True
+while is_playing:
     clock.tick(FPS)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            switch = False
+            is_playing = False
 
     group_sprite.update()
 

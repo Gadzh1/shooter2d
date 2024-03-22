@@ -14,12 +14,12 @@ pygame.display.set_caption('test')
 clock = pygame.time.Clock()
 group_sprite = pygame.sprite.Group()
 
-switch = True
-while switch:
+is_playing = True
+while is_playing:
     clock.tick(FPS)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            switch = False
+            is_playing = False
 
     group_sprite.update()
 
