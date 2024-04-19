@@ -1,3 +1,5 @@
+import random
+
 import pygame
 
 from constants import *
@@ -6,22 +8,42 @@ from meteor import Meteor
 from player import Player
 from explosion import Explosion
 from health import Health
-from enemy import Enemy, action_basic, action_zigzag
+from powerup import Powerup
+from enemy import Enemy
 
 
-def create_bullet(btype, player, shoot_sounds, all_sprites, bullets):
-    bullet = Bullet(player.rect.centerx, player.rect.top, btype)
+def create_bullet(btype, obj, shoot_sounds, all_sprites, bullets):
+    bullet = Bullet(obj.rect.centerx, obj.rect.top, btype)
     # random.choice(shoot_sounds).play()
     all_sprites.add(bullet)
     bullets.add(bullet)
 
 
-def shoot():
-    global last_shot
-    now = pygame.time.get_ticks()
-    if now - last_shot > SHOOT_DELAY:
-        last_shot = now
-        create_bullet('blue', player, shoot_sounds, all_sprites, bullets)
+def create_enemies_bullet(obj, shoot_sounds, speed):
+    bullet = Bullet(obj.rect.centerx, obj.rect.bottom, 'green')
+    bullet.speed_y = speed
+    # random.choice(shoot_sounds).play()
+    all_sprites.add(bullet)
+    enemies_bullets.add(bullet)
+
+
+def shoot(btype, speed=5):
+    global last_shot_blue
+    global last_shot_green
+
+    if btype == 'blue':
+        now = pygame.time.get_ticks()
+        if now - last_shot_blue > SHOOT_DELAY:
+            last_shot_blue = now
+            create_bullet('blue', player, shoot_sounds, all_sprites, bullets)
+
+    elif btype == 'green':
+        en = enemies.sprites()[0]
+
+        now = pygame.time.get_ticks()
+        if now - last_shot_green > 500:
+            last_shot_green = now
+            create_enemies_bullet(en, shoot_sounds, speed)
 
 
 def create_meteor():
@@ -61,7 +83,7 @@ def check_keys_state():
 
     keys_state = pygame.key.get_pressed()
     if keys_state[pygame.K_s]:
-        shoot()
+        shoot('blue')
     if keys_state[pygame.K_w]:
         if score >= LASER_PRICE:
             score -= LASER_PRICE
@@ -127,8 +149,27 @@ def collide_bullets_to_obj(bullets_gr, meteors_gr):
                 break
 
             if b.type == 'blue':
+                x = meteor.rect.centerx
+                y = meteor.rect.y
+                if IS_POWER_ON:
+                    meteor.kill()
+                    create_meteor()
+                    b.kill()
+                    if 0 <= meteor.size < 2:
+                        t = 'sm'
+                    else:
+                        t = 'lg'
+                    exp = Explosion(meteor.rect.center, t)
+                    all_sprites.add(exp)
+                    return
+
                 meteor.hp -= b.damage
                 if meteor.hp <= 0:
+
+                    # rand = random.randint(1, 3)
+                    # if rand == 3:
+                    #     powerup = Powerup(meteor.rect.x, meteor.rect.y)
+
                     meteor.kill()
                     create_meteor()
                     score += 50 - meteor.radius
@@ -142,7 +183,53 @@ def collide_bullets_to_obj(bullets_gr, meteors_gr):
                     exp = Explosion(meteor.rect.center, t)
                     all_sprites.add(exp)
 
+                    rand = random.randint(0, 1)
+                    if not rand:
+                        powerup = Powerup(x, y)
+                        all_sprites.add(powerup)
+                        powerups.add(powerup)
+
             b.kill()
+
+
+def collide_bullets_to_player(player, bullets):
+    global GAME_CHANCES, is_playing
+
+    hits = pygame.sprite.spritecollide(player, bullets, True, pygame.sprite.collide_circle)
+    for b in hits:
+        player.health -= b.damage
+
+        exp = Explosion(b.rect.center, 'sm')
+        all_sprites.add(exp)
+
+        if player.health <= 0:
+            if GAME_CHANCES == 1:
+                is_playing = False
+            else:
+                chances.empty()
+                GAME_CHANCES -= 1
+
+                chance_x = 410
+                for i in range(GAME_CHANCES):
+                    chance_x -= 50
+                    hp = Health((chance_x, 80))
+                    chances.add(hp)
+
+                player.health = 12
+
+
+def collide_powerups_to_player(powerup, player):
+    hits = pygame.sprite.spritecollide(player, powerup, True, pygame.sprite.collide_circle)
+    for p in hits:
+        if p.type == 'shield':
+            player.health += 3
+            if player.health > 12:
+                player.health = 12
+            p.kill()
+        else:
+            global IS_POWER_ON, TIMER
+            IS_POWER_ON = True
+            TIMER = pygame.time.get_ticks()
 
 
 def create_enemy():
@@ -159,7 +246,8 @@ def create_enemy():
 # start of the main ------------------------------
 player = object()
 
-last_shot = pygame.time.get_ticks()
+last_shot_blue = pygame.time.get_ticks()
+last_shot_green = pygame.time.get_ticks()
 
 pygame.init()
 display = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -174,7 +262,8 @@ all_sprites = pygame.sprite.Group()
 meteors = pygame.sprite.Group()
 enemies = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
-
+powerups = pygame.sprite.Group()
+enemies_bullets = pygame.sprite.Group()
 # images ------------------------
 background = pygame.image.load(os.path.join(IMG_FOLDER, 'blue.png')).convert()
 
@@ -235,7 +324,21 @@ while is_playing:
             m.kill()
             create_meteor()
 
-    create_enemy()
+    if len(enemies) == 0:
+        create_enemy()
+
+    for en in enemies.sprites():
+
+        if en.action_order > 1:
+            speed = 5
+            if en.action_order == 4:
+                speed = 10
+            shoot('green', speed)
+    global IS_POWER_ON
+    if IS_POWER_ON:
+        global TIMER
+        if pygame.time.get_ticks() - TIMER > 10000:
+            IS_POWER_ON = False
 
     all_sprites.update()
 
@@ -244,6 +347,8 @@ while is_playing:
     collide_player_to_obj(player, enemies)
     collide_bullets_to_obj(bullets, meteors)
     collide_bullets_to_obj(bullets, enemies)
+    collide_bullets_to_player(player, enemies_bullets)
+    collide_powerups_to_player(powerups, player)
     # ---------------------------------
 
     display.fill((0, 0, 0))

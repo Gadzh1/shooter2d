@@ -1,5 +1,8 @@
 import os
 
+IS_POWER_ON = False
+TIMER = 0
+
 WIDTH = 400
 HEIGHT = 600
 
@@ -10,7 +13,7 @@ LASER_PRICE = 5
 GAME_CHANCES = 3
 
 ENEMIES_AMOUNT = 0
-METEORS_AMOUNT = 0
+METEORS_AMOUNT = 8
 HEALTH_AMOUNT = 3
 
 GAME_FOLDER = os.path.dirname(__file__)

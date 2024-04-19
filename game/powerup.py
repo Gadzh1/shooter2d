@@ -1,3 +1,5 @@
+import random
+
 import pygame
 import os
 
@@ -10,11 +12,16 @@ powerup_images = {
 
 
 class Powerup(pygame.sprite.Sprite):
-    def __init__(self, x, y, type):
+    def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
 
-        self.image = pygame.transform.scale(powerup_images[type], (25, 25))
-        self.type = type
+        rand = random.randint(1, 2)
+        if rand == 1:
+            self.type = 'shield'
+        else:
+            self.type = 'gun'
+
+        self.image = pygame.transform.scale(powerup_images[self.type], (25, 25))
         self.x = x
         self.y = y
         self.image.set_colorkey((0, 0, 0))
