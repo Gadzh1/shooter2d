@@ -309,7 +309,7 @@ score = 0
 is_playing = True
 last_enemy_created = 0
 # enemy_interval = random.randint(7000, 15000)
-enemy_interval = 1000
+enemy_interval = 10000
 
 while is_playing:
     clock.tick(FPS)
